@@ -1,12 +1,11 @@
 # Sam's lux sensor (fw 3.1.3 / MCU 1.1.0, modelId 0000004tsh).
 # Copy of upstream illumanance_sensor.yaml (base: upstream 05e0afa).
-# Changes from upstream: name only. Add product ID from the
-# "Adding ... product id" log line once known.
+# Changes from upstream: name and product ID only.
 name: Lux sensor (Sam)
-# products:
-#   - id: <product_id>
-#     manufacturer: Tuya
-#     model: Light sensor
+products:
+  - id: oedbumjmptbajtqz
+    manufacturer: Tuya
+    model: LightSensor
 entities:
   - entity: sensor
     name: Brightness
