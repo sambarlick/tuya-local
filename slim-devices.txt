@@ -1,10 +1,18 @@
 # Device configs kept in the slim HACS release (shell globs, one per line).
+# Lines starting with ! exclude matching files after the includes.
 # Everything else in devices/ is dropped from the release zip only;
 # the repo itself stays a full mirror of upstream.
 
 # My devices (all my own configs are named <brand>_sam_*.yaml)
 *_sam_*.yaml
 kogan_*.yaml
+
+# Upstream configs replaced by my own copies (avoid duplicate matches)
+!kogan_bladeless_fan.yaml
+!kogan_kawfpac16pya_airconditioner.yaml
+!mirabella_power_strip.yaml
+!quad_powerstrip.yaml
+!smartplugv2_energyv2.yaml
 
 # Generic fallbacks for unbranded / rebadged Tuya gear
 simple_*.yaml
