@@ -47,8 +47,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="slim-$(date -u +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+          # Sortable CalVer: YYYY.M.D.<run number>, e.g. 2026.10.23.42
+          tag="$(date -u +%Y.%-m.%-d).${{ github.run_number }}"
           gh release create "$tag" tuya_local.zip \
             --title "$tag" \
             --notes "Slim build of $(git rev-parse --short HEAD) (devices per slim-devices.txt)" \
             --latest
+
+      - name: Prune old releases (keep newest 5)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq 'sort_by(.createdAt) | reverse | .[5:] | .[].tagName' |
+          while read -r t; do
+            gh release delete "$t" --yes --cleanup-tag
+          done
