@@ -26,11 +26,9 @@ jobs:
           out=$(mktemp -d)
           # Copy everything except the device configs
           cp -a "$src/." "$out/"
-          rm -rf "$out/devices"
-          mkdir -p "$out/devices"
-          # Keep the devices README for reference
-          cp "$src/devices/README.md" "$out/devices/" 2>/dev/null || true
-          # Copy device configs matching the allowlist
+          # Drop only the device YAMLs; keep __init__.py, schema, README etc.
+          rm -f "$out"/devices/*.yaml
+          # Copy back device configs matching the allowlist
           shopt -s nullglob
           while IFS= read -r pat; do
             pat="${pat%%#*}"; pat="$(echo "$pat" | xargs)"
@@ -42,6 +40,17 @@ jobs:
           [ "$count" -gt 0 ] || { echo "Allowlist matched nothing"; exit 1; }
           (cd "$out" && zip -qr "$GITHUB_WORKSPACE/tuya_local.zip" .)
           ls -lh tuya_local.zip
+          # Release notes: list of included device configs
+          {
+            echo "Slim build of \`$(git rev-parse --short HEAD)\` — $count device configs."
+            echo
+            echo "| Config | Name |"
+            echo "|---|---|"
+            for f in "$out"/devices/*.yaml; do
+              n=$(grep -m1 '^name:' "$f" | sed 's/^name:[[:space:]]*//')
+              echo "| \`$(basename "$f" .yaml)\` | $n |"
+            done
+          } > "$GITHUB_WORKSPACE/release-notes.md"
 
       - name: Publish release
         env:
@@ -51,7 +60,7 @@ jobs:
           tag="$(date -u +%Y.%-m.%-d).${{ github.run_number }}"
           gh release create "$tag" tuya_local.zip \
             --title "$tag" \
-            --notes "Slim build of $(git rev-parse --short HEAD) (devices per slim-devices.txt)" \
+            --notes-file release-notes.md \
             --latest
 
       - name: Prune old releases (keep newest 5)
