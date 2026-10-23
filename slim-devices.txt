@@ -1,0 +1,18 @@
+# Device configs kept in the slim HACS release (shell globs, one per line).
+# Everything else in devices/ is dropped from the release zip only;
+# the repo itself stays a full mirror of upstream.
+
+# My devices
+kogan_*.yaml
+
+# Generic fallbacks for unbranded / rebadged Tuya gear
+simple_*.yaml
+smartplug*.yaml
+*powerstrip*.yaml
+*power_strip*.yaml
+
+# AU brands
+grid_connect_*.yaml
+mirabella_*.yaml
+deta_*.yaml
+arlec_*.yaml
