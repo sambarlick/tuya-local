@@ -1,10 +1,9 @@
 name: Fan with oscillation angle
-# Sam's Kogan fan (fw 2.6.22, modelId fzoy2w). Add its product_id here
-# from Tuya Local diagnostics once added, so detection is exact.
-# products:
-#   - id: <product_id>
-#     manufacturer: Kogan
-#     model: <model>
+# Sam's Kogan fan (fw 2.6.22, modelId fzoy2w)
+products:
+  - id: ncofsmeeamskzhei
+    manufacturer: Kogan
+    model: SmarterHome Bladeless Fan (oscillation angle)
 entities:
   - entity: fan
     translation_only_key: fan_with_presets
