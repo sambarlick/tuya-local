@@ -2,7 +2,8 @@
 # Everything else in devices/ is dropped from the release zip only;
 # the repo itself stays a full mirror of upstream.
 
-# My devices
+# My devices (all my own configs are named <brand>_sam_*.yaml)
+*_sam_*.yaml
 kogan_*.yaml
 
 # Generic fallbacks for unbranded / rebadged Tuya gear
