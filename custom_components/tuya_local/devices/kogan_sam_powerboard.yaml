@@ -160,6 +160,9 @@ entities:
         optional: true
         name: sensor
         mapping:
+          # This board doesn't report DP 26 locally: treat missing as OK
+          - dps_val: null
+            value: false
           - dps_val: 0
             value: false
           - value: true
