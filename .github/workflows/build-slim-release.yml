@@ -1,0 +1,54 @@
+name: Build slim release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # manual "Run workflow" button
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slim-release
+  cancel-in-progress: true
+
+jobs:
+  release:
+    if: github.repository == 'sambarlick/tuya-local'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build slim zip
+        run: |
+          set -euo pipefail
+          src=custom_components/tuya_local
+          out=$(mktemp -d)
+          # Copy everything except the device configs
+          cp -a "$src/." "$out/"
+          rm -rf "$out/devices"
+          mkdir -p "$out/devices"
+          # Keep the devices README for reference
+          cp "$src/devices/README.md" "$out/devices/" 2>/dev/null || true
+          # Copy device configs matching the allowlist
+          shopt -s nullglob
+          while IFS= read -r pat; do
+            pat="${pat%%#*}"; pat="$(echo "$pat" | xargs)"
+            [ -z "$pat" ] && continue
+            for f in $src/devices/$pat; do cp "$f" "$out/devices/"; done
+          done < slim-devices.txt
+          count=$(ls "$out/devices"/*.yaml | wc -l)
+          echo "Kept $count device configs"
+          [ "$count" -gt 0 ] || { echo "Allowlist matched nothing"; exit 1; }
+          (cd "$out" && zip -qr "$GITHUB_WORKSPACE/tuya_local.zip" .)
+          ls -lh tuya_local.zip
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="slim-$(date -u +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+          gh release create "$tag" tuya_local.zip \
+            --title "$tag" \
+            --notes "Slim build of $(git rev-parse --short HEAD) (devices per slim-devices.txt)" \
+            --latest
