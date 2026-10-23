@@ -20,6 +20,9 @@ smartplug*.yaml
 *powerstrip*.yaml
 *power_strip*.yaml
 
+# Addressable (RGBIC "dreamlight") LED strips
+dreamlight_*.yaml
+
 # AU brands
 grid_connect_*.yaml
 mirabella_*.yaml
