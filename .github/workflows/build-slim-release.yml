@@ -33,7 +33,14 @@ jobs:
           while IFS= read -r pat; do
             pat="${pat%%#*}"; pat="$(echo "$pat" | xargs)"
             [ -z "$pat" ] && continue
+            [ "${pat:0:1}" = "!" ] && continue
             for f in $src/devices/$pat; do cp "$f" "$out/devices/"; done
+          done < slim-devices.txt
+          # Then remove anything matching an exclusion (!pattern)
+          while IFS= read -r pat; do
+            pat="${pat%%#*}"; pat="$(echo "$pat" | xargs)"
+            [ "${pat:0:1}" = "!" ] || continue
+            for f in $out/devices/${pat:1}; do rm -f "$f"; done
           done < slim-devices.txt
           count=$(ls "$out/devices"/*.yaml | wc -l)
           echo "Kept $count device configs"
