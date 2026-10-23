@@ -9,10 +9,10 @@
 #   - 102 defrost, 106 alarms (incl. tank full), 109 internal drying,
 #     110 unit type mapped (were unknown_*)
 name: Portable aircon (Sam)
-# products:
-#   - id: <product_id from the "Adding ... product id" log line>
-#     manufacturer: Kogan
-#     model: Portable Air Conditioner
+products:
+  - id: 1z9vbwsgpmsrhuha
+    manufacturer: Kogan
+    model: Smart PAC_PY16
 entities:
   - entity: climate
     translation_only_key: aircon_extra
