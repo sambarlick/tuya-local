@@ -13,6 +13,7 @@ kogan_*.yaml
 !mirabella_power_strip.yaml
 !quad_powerstrip.yaml
 !smartplugv2_energyv2.yaml
+!arlec_6speed_fan.yaml
 
 # Generic fallbacks for unbranded / rebadged Tuya gear
 simple_*.yaml
