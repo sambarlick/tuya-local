@@ -1,0 +1,75 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "17 16 1 * *" # 03:17 AEDT on the 2nd of each month
+  workflow_dispatch: # manual "Run workflow" button
+
+permissions:
+  contents: write
+  actions: write # to start the slim build afterwards
+
+jobs:
+  sync:
+    if: github.repository == 'sambarlick/tuya-local'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          # Optional PAT (Contents + Workflows write). Needed only when upstream
+          # changes files under .github/workflows; falls back to GITHUB_TOKEN.
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Merge upstream main
+        id: merge
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898273+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/make-all/tuya-local.git
+          git fetch upstream main
+
+          behind=$(git rev-list --count HEAD..upstream/main)
+          echo "Upstream commits to merge: $behind"
+          if [ "$behind" -eq 0 ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          if ! git merge --no-edit upstream/main; then
+            conflicts=$(git diff --name-only --diff-filter=U)
+            echo "Conflicts: $conflicts"
+            # hacs.json is the only file we auto-resolve: take upstream's
+            # copy and re-apply this fork's zip-release keys.
+            if [ "$conflicts" != "hacs.json" ]; then
+              echo "::error::Merge conflict needs manual resolution: $conflicts"
+              git merge --abort
+              exit 1
+            fi
+            git checkout --theirs hacs.json
+            python3 - <<'PY'
+          import json
+          h = json.load(open("hacs.json"))
+          h.update({"zip_release": True, "filename": "tuya_local.zip"})
+          json.dump(h, open("hacs.json", "w"), indent=4)
+          open("hacs.json", "a").write("\n")
+          PY
+            git add hacs.json
+            git commit --no-edit
+          fi
+
+          # Safety net: hacs.json must still point HACS at the slim zip
+          python3 -c "import json,sys; h=json.load(open('hacs.json')); sys.exit(0 if h.get('zip_release') and h.get('filename')=='tuya_local.zip' else 1)" \
+            || { echo "::error::hacs.json lost zip_release settings"; exit 1; }
+
+          git push origin main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with GITHUB_TOKEN don't trigger other workflows,
+      # so start the slim build explicitly.
+      - name: Build slim release
+        if: steps.merge.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build-slim-release.yml --ref main

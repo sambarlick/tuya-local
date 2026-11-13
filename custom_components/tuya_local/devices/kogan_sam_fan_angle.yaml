@@ -1,4 +1,4 @@
-name: Fan with oscillation angle
+name: Kogan fan, oscillation angle (Sam)
 # Sam's Kogan fan (fw 2.6.22, modelId fzoy2w)
 products:
   - id: ncofsmeeamskzhei
