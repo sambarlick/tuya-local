@@ -3,7 +3,7 @@ name: Build slim release
 on:
   push:
     branches: [main]
-  workflow_dispatch: # manual "Run workflow" button
+  workflow_dispatch: # manual "Run workflow" button (also used by the sync workflow)
 
 permissions:
   contents: write
@@ -18,13 +18,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, to date each of my own configs
+
+      - name: Work out release tag
+        id: tag
+        run: |
+          # Sortable CalVer: YYYY.M.D.<run number>, e.g. 2026.11.13.42
+          echo "tag=$(date -u +%Y.%-m.%-d).${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Build slim zip
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
           src=custom_components/tuya_local
           out=$(mktemp -d)
-          # Copy everything except the device configs
           cp -a "$src/." "$out/"
           # Drop only the device YAMLs; keep __init__.py, schema, README etc.
           rm -f "$out"/devices/*.yaml
@@ -45,28 +54,56 @@ jobs:
           count=$(ls "$out/devices"/*.yaml | wc -l)
           echo "Kept $count device configs"
           [ "$count" -gt 0 ] || { echo "Allowlist matched nothing"; exit 1; }
+
+          # Brand the manifest for this fork (repo copy stays untouched)
+          python3 - "$out/manifest.json" "$TAG" <<'PY'
+          import json, sys
+          path, tag = sys.argv[1], sys.argv[2]
+          m = json.load(open(path))
+          upstream_version = m.get("version")
+          m.update({
+              "name": "Tuya Local (Sam)",
+              "documentation": "https://github.com/sambarlick/tuya-local",
+              "issue_tracker": "https://github.com/sambarlick/tuya-local/issues",
+              "codeowners": ["@sambarlick"],
+              "version": tag,
+          })
+          json.dump(m, open(path, "w"), indent=2)
+          open(path, "a").write("\n")
+          print(f"manifest: version {upstream_version} -> {tag}")
+          PY
+
           (cd "$out" && zip -qr "$GITHUB_WORKSPACE/tuya_local.zip" .)
           ls -lh tuya_local.zip
-          # Release notes: list of included device configs
+
+          # Release notes: my own configs only, newest first
+          upstream_version=$(python3 -c "import json;print(json.load(open('$src/manifest.json'))['version'])")
           {
-            echo "Slim build of \`$(git rev-parse --short HEAD)\` — $count device configs."
+            echo "Slim build of \`$(git rev-parse --short HEAD)\`, based on upstream Tuya Local $upstream_version."
             echo
-            echo "| Config | Name |"
-            echo "|---|---|"
-            for f in "$out"/devices/*.yaml; do
-              n=$(grep -m1 '^name:' "$f" | sed 's/^name:[[:space:]]*//')
-              echo "| \`$(basename "$f" .yaml)\` | $n |"
+            echo "**My device configs** (newest first):"
+            echo
+            echo "| Added | Config | Device |"
+            echo "|---|---|---|"
+            for f in $src/devices/*_sam_*.yaml; do
+              added=$(git log --diff-filter=A --format='%ct|%cs' -1 -- "$f")
+              echo "$added|$f"
+            done | sort -rn | while IFS='|' read -r _ added f; do
+              name=$(grep -m1 '^name:' "$f" | sed 's/^name:[[:space:]]*//')
+              echo "| $added | \`$(basename "$f" .yaml)\` | $name |"
             done
+            echo
+            echo "$count device configs in this build in total (see \`slim-devices.txt\`)."
           } > "$GITHUB_WORKSPACE/release-notes.md"
+          cat "$GITHUB_WORKSPACE/release-notes.md"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          # Sortable CalVer: YYYY.M.D.<run number>, e.g. 2026.10.23.42
-          tag="$(date -u +%Y.%-m.%-d).${{ github.run_number }}"
-          gh release create "$tag" tuya_local.zip \
-            --title "$tag" \
+          gh release create "$TAG" tuya_local.zip \
+            --title "$TAG" \
             --notes-file release-notes.md \
             --latest
 
